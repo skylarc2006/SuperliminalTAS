@@ -61,12 +61,13 @@ namespace SuperliminalTAS
 
 			if (statusText != null)
 			{
-				if (playingBack)
-					statusText.text = "playback: " + frame + " / " + button["Jump"].Count;
+				statusText.text = "SuperliminalTAS 0.1.1";
+                if (playingBack)
+					statusText.text += "\n\nplayback: " + frame + " / " + button["Jump"].Count;
 				else if (recording)
-					statusText.text = "recording: " + frame + " / ?";
+					statusText.text += "\n\nrecording: " + frame + " / ?";
 				else
-					statusText.text = "stopped: 0 / " + button["Jump"].Count;
+					statusText.text += "\n\nstopped: 0 / " + button["Jump"].Count;
 
 				if (GameManager.GM.player != null)
 				{
@@ -263,13 +264,13 @@ namespace SuperliminalTAS
 			gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
 
 			statusText = gameObject.AddComponent<Text>();
-			statusText.fontSize = 40;
+			statusText.fontSize = (int)(40.0 * Screen.width / 1920.0);
 			foreach (Font font in Resources.FindObjectsOfTypeAll<Font>())
 				if (font.name == "NotoSans-CondensedSemiBold")
 					statusText.font = font;
 
 			var rect = statusText.GetComponent<RectTransform>();
-			rect.sizeDelta = new Vector2(Screen.currentResolution.width / 4, Screen.currentResolution.height);
+			rect.sizeDelta = new Vector2(Screen.width / 4, Screen.height);
 			rect.pivot = new Vector2(0f, 1f);
 			rect.anchorMin = new Vector2(0f, 1f);
 			rect.anchorMax = new Vector2(0f, 1f);

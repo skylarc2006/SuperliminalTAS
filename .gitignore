@@ -1,0 +1,11 @@
+.git/
+.vs/
+bin/
+obj/
+lib/Assembly-CSharp.dll
+lib/Assembly-CSharp-firstpass.dll
+lib/Rewired_Core.dll
+lib/Rewired_Windows.dll
+lib/StandaloneFileBrowser.dll
+lib/UnityEngine.dll
+lib/UnityEngine.UI.dll
