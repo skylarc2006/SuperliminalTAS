@@ -2,6 +2,7 @@
 .vs/
 bin/
 obj/
+.vscode/
 lib/Assembly-CSharp.dll
 lib/Assembly-CSharp-firstpass.dll
 lib/Rewired_Core.dll
