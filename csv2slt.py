@@ -205,7 +205,6 @@ def main():
             replay_file.write(struct.pack("<f", input_frame.move_vertical))
             
             # Look horizontal
-            print(f"Look horizontal: {input_frame.look_horizontal}")
             replay_file.write(struct.pack("<f", input_frame.look_horizontal))
             
             # Look vertical
