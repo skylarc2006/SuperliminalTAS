@@ -53,17 +53,13 @@ namespace SuperliminalTAS
         private void ReloadCheckpoint()
         {
             GameManager.GM.TriggerScenePreUnload();
-            UnityEngine.Random.InitState(RNG_SEED);
             GameManager.GM.GetComponent<SaveAndCheckpointManager>().ResetToLastCheckpoint();
-            UnityEngine.Random.InitState(RNG_SEED);
         }
 
         private void RestartMap()
         {
             GameManager.GM.TriggerScenePreUnload();
-            UnityEngine.Random.InitState(RNG_SEED);
             GameManager.GM.GetComponent<SaveAndCheckpointManager>().RestartLevel();
-            UnityEngine.Random.InitState(RNG_SEED);
         }
 
         private void LateUpdate()
@@ -76,7 +72,13 @@ namespace SuperliminalTAS
             }
             else if (playingBack)
             {
-				if (frame > button["Jump"].Count)
+                if (!pastFirstFrame)
+                {
+                    // Skip exactly one frame after restart
+                    pastFirstFrame = true;
+					return;
+                }
+				if (frame >= button["Jump"].Count)
 				{
 					StopPlayback();
 					return;
@@ -361,22 +363,22 @@ namespace SuperliminalTAS
 		
 		internal bool GetRecordedButton(string actionName)
 		{
-			return button[actionName][frame - 1];
+			return button[actionName][frame];
 		}
 
 		internal bool GetRecordedButtonDown(string actionName)
 		{
-			return buttonDown[actionName][frame - 1];
+			return buttonDown[actionName][frame];
 		}
 
 		internal bool GetRecordedButtonUp(string actionName)
 		{
-			return buttonUp[actionName][frame - 1];
+			return buttonUp[actionName][frame];
 		}
 
 		internal float GetRecordedAxis(string actionName)
 		{
-			return axis[actionName][frame - 1];
+			return axis[actionName][frame];
 		}
 
         private void GenerateStatusText()
