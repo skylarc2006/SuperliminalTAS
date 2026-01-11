@@ -76,16 +76,6 @@ namespace SuperliminalTAS
             }
         }
 
-		private void SaveState()
-		{
-
-		}
-
-		private void LoadState()
-		{
-
-		}
-
         private void ToggleSpeedhack()
 		{
             if (speedhackEnabled)
@@ -144,7 +134,7 @@ namespace SuperliminalTAS
 
             if (statusText != null)
             {
-                statusText.text = "SuperliminalTAS v0.1.2";
+                statusText.text = "SuperliminalTAS v0.2.0";
 
                 // Detect transition
                 if (showInterface != lastShowInterface)
@@ -212,9 +202,11 @@ namespace SuperliminalTAS
 							"F4 - Toggle Speedhack\n" +
 							"Mouse Wheel Up/Down - Adjust Percentage\n\n" +
 							
+							/*
 							"F5 - Save State\n" +
 							"F6 - Load State\n\n" +
-							
+							*/
+
 							"F7 - Toggle Start from Restart Level / Last Checkpoint\n" +
 							"Current: " + (startFromCheckpoint ? "Last Checkpoint" : "Restart Level") + "\n\n" +
 
@@ -277,6 +269,8 @@ namespace SuperliminalTAS
 			{
 				ChangeSpeedhackPercentage();
             }
+
+			/*
 			if (Input.GetKeyDown(KeyCode.F5))
 			{
 				SaveState();
@@ -285,6 +279,8 @@ namespace SuperliminalTAS
 			{
 				LoadState();
             }
+			*/
+
             if (Input.GetKeyDown(KeyCode.F7))
 			{
 				startFromCheckpoint = !startFromCheckpoint;
