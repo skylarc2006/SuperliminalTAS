@@ -5,7 +5,7 @@
 		public static bool passthrough = true;
 		private static DemoRecorder recording;
 
-        internal static bool GetButton(string actionName, bool originalResult)
+		internal static bool GetButton(string actionName, bool originalResult)
 		{
 			if (passthrough || (actionName != "Jump" && actionName != "Grab" && actionName != "Rotate"))
 				return originalResult;

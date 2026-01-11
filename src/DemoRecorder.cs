@@ -21,7 +21,6 @@ namespace SuperliminalTAS
 		private Dictionary<string, List<bool>> buttonDown;
 		private Dictionary<string, List<bool>> buttonUp;
 		private Dictionary<string, List<float>> axis;
-        const int RNG_SEED = 63;
 		private Text statusText;
         private int baseFontSize;
         private bool lastShowInterface = true;
@@ -32,7 +31,6 @@ namespace SuperliminalTAS
 		private float speedhackPercentage = 30.0f;
 		private bool speedhackEnabled = false;
 		const int NORMAL_FRAME_RATE = 50;
-        private bool pastFirstFrame;
 
         private readonly StandaloneFileBrowserWindows fileBrowser = new();
         private readonly ExtensionFilter[] extensionList = new[] {
@@ -47,44 +45,25 @@ namespace SuperliminalTAS
 			{
 				Directory.CreateDirectory(demoDirectory);
 			}
-            ResetLists();
+			ResetLists();
 		}
 
-        private void ReloadCheckpoint()
-        {
-            GameManager.GM.TriggerScenePreUnload();
-            GameManager.GM.GetComponent<SaveAndCheckpointManager>().ResetToLastCheckpoint();
-        }
-
-        private void RestartMap()
-        {
-            GameManager.GM.TriggerScenePreUnload();
-            GameManager.GM.GetComponent<SaveAndCheckpointManager>().RestartLevel();
-        }
-
-        private void LateUpdate()
+		private void LateUpdate()
 		{
             HandleInput();
-            if (recording)
+			if (recording)
 			{
-                RecordInputs();
-                frame++;
-            }
-            else if (playingBack)
-            {
-                if (!pastFirstFrame)
-                {
-                    // Skip exactly one frame after restart
-                    pastFirstFrame = true;
-					return;
-                }
-				if (frame >= button["Jump"].Count)
+				RecordInputs();
+				frame++;
+			}
+			else if (playingBack)
+			{
+				frame++;
+				if (frame > button["Jump"].Count)
 				{
 					StopPlayback();
-					return;
 				}
-                frame++;
-            }
+			}
 
             if (statusText == null && GameObject.Find("UI_PAUSE_MENU") != null)
 			{
@@ -142,7 +121,7 @@ namespace SuperliminalTAS
 
 						statusText.text +=
 							$"Horizontal Velocity: {horizontalVelocity:0.0000}\n" +
-							$"Vertical Velocity: {playerVel.Y:0.0000}\n";
+							$"Vertical Velocity: {playerVel.Y:0.0000}";
 
                         prev_x = playerPos.x;
                         prev_y = playerPos.y;
@@ -268,14 +247,13 @@ namespace SuperliminalTAS
 
 		private void StartRecording()
 		{
+            UnityEngine.Random.InitState(67);
             ResetLists();
 			recording = true;
 			TASInput.StopPlayback();
 			frame = 0;
             GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
-            RestartMap();
-            UnityEngine.Random.InitState(RNG_SEED);
-        }
+		}
 
 		private void ResetLists()
 		{
@@ -307,7 +285,7 @@ namespace SuperliminalTAS
 				["Look Horizontal"] = new(),
 				["Look Vertical"] = new()
 			};
-        }
+		}
 
 		private void StopRecording()
 		{
@@ -317,7 +295,7 @@ namespace SuperliminalTAS
 
         private void RecordInputs()
 		{
-            button["Jump"].Add(GameManager.GM.playerInput.GetButton("Jump"));
+			button["Jump"].Add(GameManager.GM.playerInput.GetButton("Jump"));
 			button["Grab"].Add(GameManager.GM.playerInput.GetButton("Grab"));
 			button["Rotate"].Add(GameManager.GM.playerInput.GetButton("Rotate"));
 
@@ -335,24 +313,19 @@ namespace SuperliminalTAS
 			axis["Look Vertical"].Add(GameManager.GM.playerInput.GetAxis("Look Vertical"));
 		}
 
-        private void StartPlayback()
-        {
+		private void StartPlayback()
+		{
+            UnityEngine.Random.InitState(67);
             if (button["Jump"].Count < 1)
-                return;
-
-            recording = false;
-            playingBack = true;
-            pastFirstFrame = false;
-
-            TASInput.StartPlayback(this);
-            frame = 0;
-
-            GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
-            RestartMap();
-            UnityEngine.Random.InitState(RNG_SEED);
+				return;
+			recording = false;
+			playingBack = true;
+			TASInput.StartPlayback(this);
+			frame = 0;
+			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
         }
 
-        private void StopPlayback()
+		private void StopPlayback()
 		{
 			recording = false;
 			playingBack = false;
@@ -360,28 +333,27 @@ namespace SuperliminalTAS
 			frame = 0;
 		}
 
-		
 		internal bool GetRecordedButton(string actionName)
 		{
-			return button[actionName][frame];
+			return button[actionName][frame - 1];
 		}
 
 		internal bool GetRecordedButtonDown(string actionName)
 		{
-			return buttonDown[actionName][frame];
+			return buttonDown[actionName][frame - 1];
 		}
 
 		internal bool GetRecordedButtonUp(string actionName)
 		{
-			return buttonUp[actionName][frame];
+			return buttonUp[actionName][frame - 1];
 		}
 
 		internal float GetRecordedAxis(string actionName)
 		{
-			return axis[actionName][frame];
+			return axis[actionName][frame - 1];
 		}
 
-        private void GenerateStatusText()
+		private void GenerateStatusText()
 		{
 			GameObject gameObject = new("TASMod_UI");
 			gameObject.transform.parent = GameObject.Find("UI_PAUSE_MENU").transform.Find("Canvas");
