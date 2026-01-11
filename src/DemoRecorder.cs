@@ -48,7 +48,19 @@ namespace SuperliminalTAS
 			ResetLists();
 		}
 
-		private void LateUpdate()
+        void ReloadCheckpoint()
+        {
+            GameManager.GM.TriggerScenePreUnload();
+            GameManager.GM.GetComponent<SaveAndCheckpointManager>().ResetToLastCheckpoint();
+        }
+
+        void RestartMap()
+        {
+            GameManager.GM.TriggerScenePreUnload();
+            GameManager.GM.GetComponent<SaveAndCheckpointManager>().RestartLevel();
+        }
+
+        private void LateUpdate()
 		{
             HandleInput();
 			if (recording)
@@ -250,7 +262,8 @@ namespace SuperliminalTAS
 			ResetLists();
 			recording = true;
 			TASInput.StopPlayback();
-			frame = 0;
+			RestartMap();
+            frame = 0;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
 
@@ -319,7 +332,8 @@ namespace SuperliminalTAS
 			recording = false;
 			playingBack = true;
 			TASInput.StartPlayback(this);
-			frame = 0;
+            RestartMap();
+            frame = 1;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
 
