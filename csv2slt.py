@@ -67,7 +67,6 @@ def decelerate(velocity):
         velocity = 0.0
     elif velocity > 0.0 and negative:
         velocity = 0.0
-    return velocity
 
 def main():
     if len(sys.argv) <= 1:

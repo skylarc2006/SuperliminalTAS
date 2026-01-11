@@ -247,12 +247,11 @@ namespace SuperliminalTAS
 
 		private void StartRecording()
 		{
-            UnityEngine.Random.InitState(67);
-            ResetLists();
+			ResetLists();
 			recording = true;
 			TASInput.StopPlayback();
 			frame = 0;
-            GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
+			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
 
 		private void ResetLists()
@@ -293,7 +292,7 @@ namespace SuperliminalTAS
 			frame = 0;
 		}
 
-        private void RecordInputs()
+		private void RecordInputs()
 		{
 			button["Jump"].Add(GameManager.GM.playerInput.GetButton("Jump"));
 			button["Grab"].Add(GameManager.GM.playerInput.GetButton("Grab"));
@@ -315,15 +314,14 @@ namespace SuperliminalTAS
 
 		private void StartPlayback()
 		{
-            UnityEngine.Random.InitState(67);
-            if (button["Jump"].Count < 1)
+			if (button["Jump"].Count < 1)
 				return;
 			recording = false;
 			playingBack = true;
 			TASInput.StartPlayback(this);
 			frame = 0;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
-        }
+		}
 
 		private void StopPlayback()
 		{
