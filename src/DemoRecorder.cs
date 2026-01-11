@@ -31,6 +31,9 @@ namespace SuperliminalTAS
 		private float speedhackPercentage = 30.0f;
 		private bool speedhackEnabled = false;
 		const int NORMAL_FRAME_RATE = 50;
+		const float SPEEDHACK_MINIMUM_PERCENTAGE = 5.0f;
+		const float SPEEDHACK_MAXIMUM_PERCENTAGE = 1000.0f;
+		private bool startFromCheckpoint = false;
 
         private readonly StandaloneFileBrowserWindows fileBrowser = new();
         private readonly ExtensionFilter[] extensionList = new[] {
@@ -41,23 +44,80 @@ namespace SuperliminalTAS
 
         private void Awake()
 		{
-			if (!Directory.Exists(demoDirectory))
+			Application.targetFrameRate = NORMAL_FRAME_RATE;
+            if (!Directory.Exists(demoDirectory))
 			{
 				Directory.CreateDirectory(demoDirectory);
 			}
 			ResetLists();
 		}
 
-        void ReloadCheckpoint()
+        private void ReloadCheckpoint()
         {
             GameManager.GM.TriggerScenePreUnload();
             GameManager.GM.GetComponent<SaveAndCheckpointManager>().ResetToLastCheckpoint();
         }
 
-        void RestartMap()
+        private void RestartMap()
         {
             GameManager.GM.TriggerScenePreUnload();
             GameManager.GM.GetComponent<SaveAndCheckpointManager>().RestartLevel();
+        }
+
+		private void ResetLevelState()
+		{
+			if (startFromCheckpoint)
+			{
+				ReloadCheckpoint();
+			}
+			else
+			{
+				RestartMap();
+            }
+        }
+
+		private void SaveState()
+		{
+
+		}
+
+		private void LoadState()
+		{
+
+		}
+
+        private void ToggleSpeedhack()
+		{
+            if (speedhackEnabled)
+            {
+                Application.targetFrameRate = NORMAL_FRAME_RATE;
+                speedhackEnabled = false;
+            }
+            else
+            {
+                Application.targetFrameRate = (int)(NORMAL_FRAME_RATE * speedhackPercentage / 100.0f);
+                speedhackEnabled = true;
+            }
+        }
+
+		private void ChangeSpeedhackPercentage()
+		{
+            float percentageChange = Input.mouseScrollDelta.y * 5.0f;
+
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            {
+                percentageChange *= 5.0f;
+            }
+
+            speedhackPercentage += percentageChange;
+            if (speedhackPercentage < SPEEDHACK_MINIMUM_PERCENTAGE)
+                speedhackPercentage = SPEEDHACK_MINIMUM_PERCENTAGE;
+            if (speedhackPercentage > SPEEDHACK_MAXIMUM_PERCENTAGE)
+                speedhackPercentage = SPEEDHACK_MAXIMUM_PERCENTAGE;
+            if (speedhackEnabled)
+            {
+                Application.targetFrameRate = (int)(NORMAL_FRAME_RATE * speedhackPercentage / 100.0f);
+            }
         }
 
         private void LateUpdate()
@@ -104,11 +164,13 @@ namespace SuperliminalTAS
                 if (showInterface)
                 {
                     if (playingBack)
-                        statusText.text += "\n\nplayback: " + frame + " / " + button["Jump"].Count;
+                        statusText.text += "\n\nplayback: " + (frame - 1) + " / " + button["Jump"].Count;
                     else if (recording)
                         statusText.text += "\n\nrecording: " + frame + " / ?";
                     else
                         statusText.text += "\n\nstopped: 0 / " + button["Jump"].Count;
+
+					statusText.text += $"\n\nSpeedhack: {(speedhackEnabled ? "Enabled" : "Disabled")} ({speedhackPercentage}%)";
 
                     if (showPlayerVariables && GameManager.GM.player != null)
                     {
@@ -147,7 +209,14 @@ namespace SuperliminalTAS
                             "F2 - Toggle Show Player Variables\n" +
                             "F3 - Toggle Show Keybinds\n\n" +
 
-							"F5 - Toggle Speedhack\n\n" +
+							"F4 - Toggle Speedhack\n" +
+							"Mouse Wheel Up/Down - Adjust Percentage\n\n" +
+							
+							"F5 - Save State\n" +
+							"F6 - Load State\n\n" +
+							
+							"F7 - Toggle Start from Restart Level / Last Checkpoint\n" +
+							"Current: " + (startFromCheckpoint ? "Last Checkpoint" : "Restart Level") + "\n\n" +
 
                             "F8 - Play\n" +
                             "F9 - Stop\n" +
@@ -200,21 +269,28 @@ namespace SuperliminalTAS
             {
                 showKeybinds = !showKeybinds;
             }
-            if (Input.GetKeyDown(KeyCode.F5))
+            if (Input.GetKeyDown(KeyCode.F4))
 			{
-				if (speedhackEnabled)
-				{
-					Application.targetFrameRate = NORMAL_FRAME_RATE;
-					speedhackEnabled = false;
-                }
-                else
-				{
-                    Application.targetFrameRate = (int)(NORMAL_FRAME_RATE * speedhackPercentage / 100.0f);
-					speedhackEnabled = true;
-                }
+				ToggleSpeedhack();
             }
-            
-            if (Input.GetKeyDown(KeyCode.F11))
+			if (Input.mouseScrollDelta.y != 0)
+			{
+				ChangeSpeedhackPercentage();
+            }
+			if (Input.GetKeyDown(KeyCode.F5))
+			{
+				SaveState();
+            }
+			if (Input.GetKeyDown(KeyCode.F6))
+			{
+				LoadState();
+            }
+            if (Input.GetKeyDown(KeyCode.F7))
+			{
+				startFromCheckpoint = !startFromCheckpoint;
+            }
+
+			if (Input.GetKeyDown(KeyCode.F11))
             {
                 UnityEngine.Cursor.lockState = CursorLockMode.None;
                 UnityEngine.Cursor.visible = true;
@@ -261,8 +337,8 @@ namespace SuperliminalTAS
 		{
 			ResetLists();
 			recording = true;
-			TASInput.StopPlayback();
-			RestartMap();
+            TASInput.StopPlayback();
+			ResetLevelState();
             frame = 0;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
@@ -332,7 +408,7 @@ namespace SuperliminalTAS
 			recording = false;
 			playingBack = true;
 			TASInput.StartPlayback(this);
-            RestartMap();
+            ResetLevelState();
             frame = 1;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
@@ -372,7 +448,7 @@ namespace SuperliminalTAS
 			gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
 
 			statusText = gameObject.AddComponent<Text>();
-            statusText.fontSize = (int)(30 * Screen.height / 1080.0);
+            statusText.fontSize = (int)(24 * Screen.height / 1080.0);
             baseFontSize = statusText.fontSize;
             if (!showInterface)
             {
