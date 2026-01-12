@@ -33,13 +33,15 @@ namespace SuperliminalTAS
 		const int NORMAL_FRAME_RATE = 50;
 		const float SPEEDHACK_MINIMUM_PERCENTAGE = 5.0f;
 		const float SPEEDHACK_MAXIMUM_PERCENTAGE = 1000.0f;
+        private bool firstFrameOfRecording = false;
 		private bool startFromCheckpoint = false;
+        private string currentLoadedFile = "";
 
         private readonly StandaloneFileBrowserWindows fileBrowser = new();
-        private readonly ExtensionFilter[] extensionList = new[] {
-			new SFB.ExtensionFilter("Superliminal TAS Recording (*.slt)", "slt"),
+		private readonly ExtensionFilter[] extensionList = new[] {
+			new SFB.ExtensionFilter("Superliminal TAS (*.slt, *.csv)", "slt", "csv"),
 			new SFB.ExtensionFilter("All Files", "*")
-		};
+        };
 		private readonly string demoDirectory = AppDomain.CurrentDomain.BaseDirectory + "\\demos";
 
         private void Awake()
@@ -51,6 +53,19 @@ namespace SuperliminalTAS
 			}
 			ResetLists();
 		}
+
+        private void RefreshDemo()
+        {
+            if (currentLoadedFile.EndsWith(".csv"))
+            {
+                LoadFromCsv(currentLoadedFile);
+            }
+            else
+            {
+                using var stream = File.OpenRead(currentLoadedFile);
+                ReadFromFileStream(stream);
+            }
+        }
 
         private void ReloadCheckpoint()
         {
@@ -113,7 +128,11 @@ namespace SuperliminalTAS
         private void LateUpdate()
 		{
             HandleInput();
-			if (recording)
+            if (recording && firstFrameOfRecording)
+            {
+                firstFrameOfRecording = false;
+            }
+            else if (recording)
 			{
 				RecordInputs();
 				frame++;
@@ -153,12 +172,13 @@ namespace SuperliminalTAS
 
                 if (showInterface)
                 {
+                    statusText.text += $"\n\nCurrent File: {(currentLoadedFile == "" ? "None" : Path.GetFileName(currentLoadedFile))}";
                     if (playingBack)
-                        statusText.text += "\n\nplayback: " + (frame - 1) + " / " + button["Jump"].Count;
+                        statusText.text += "\nplayback: " + (frame - 1) + " / " + button["Jump"].Count;
                     else if (recording)
-                        statusText.text += "\n\nrecording: " + frame + " / ?";
+                        statusText.text += "\nrecording: " + frame + " / ?";
                     else
-                        statusText.text += "\n\nstopped: 0 / " + button["Jump"].Count;
+                        statusText.text += "\nstopped: 0 / " + button["Jump"].Count;
 
 					statusText.text += $"\n\nSpeedhack: {(speedhackEnabled ? "Enabled" : "Disabled")} ({speedhackPercentage}%)";
 
@@ -302,37 +322,61 @@ namespace SuperliminalTAS
 			}
         }
 
-		private void OpenDemo()
-		{
-			var selectedFile = fileBrowser.OpenFilePanel("Open", demoDirectory, extensionList, false);
-			if (selectedFile.FirstOrDefault() != null)
-			{
-				var stream = File.OpenRead(selectedFile.FirstOrDefault()?.Name);
-				if (stream != null)
-				{
-					ReadFromFileStream(stream);
-				}
-			}
-		}
+        private void OpenDemo()
+        {
+            var selectedFile = fileBrowser.OpenFilePanel("Open", demoDirectory, extensionList, false);
 
-		private void SaveDemo()
-		{
-			if (button["Jump"].Count == 0)
-				return;
+            var file = selectedFile.FirstOrDefault();
+            if (file == null)
+                return;
 
-			var selectedFile = fileBrowser.SaveFilePanel("Save Recording as", demoDirectory, $"SuperliminalTAS-{System.DateTime.Now:yyyy-MM-dd-HH-mm-ss}.slt", extensionList);
-			if (selectedFile != null)
-			{
-				if (!selectedFile.Name.EndsWith(".slt"))
-					selectedFile.Name += ".slt";
-				File.WriteAllBytes(selectedFile.Name, SerializeToByteArray());
-			}
-		}
+            if (file.Name.EndsWith(".csv"))
+            {
+                LoadFromCsv(file.Name);
+            }
+            else
+            {
+                using var stream = File.OpenRead(file.Name);
+                ReadFromFileStream(stream);
+            }
+            currentLoadedFile = file.Name;
+        }
 
-		private void StartRecording()
+        private void SaveDemo()
+        {
+            if (button["Jump"].Count == 0)
+                return;
+
+            var selectedFile = fileBrowser.SaveFilePanel(
+                "Save Recording as",
+                demoDirectory,
+                $"SuperliminalTAS-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}",
+                new[] {
+            new SFB.ExtensionFilter("Superliminal TAS (*.slt)", "slt"),
+            new SFB.ExtensionFilter("All Files", "*")
+                }
+            );
+
+            if (selectedFile == null)
+                return;
+            else
+            {
+                if (!selectedFile.Name.EndsWith(".slt"))
+                    selectedFile.Name += ".slt";
+
+                File.WriteAllBytes(selectedFile.Name, SerializeToByteArray());
+            }
+            currentLoadedFile = selectedFile.Name;
+            RefreshDemo();
+
+        }
+
+        private void StartRecording()
 		{
+            currentLoadedFile = "";
 			ResetLists();
 			recording = true;
+            firstFrameOfRecording = true;
             TASInput.StopPlayback();
 			ResetLevelState();
             frame = 0;
@@ -401,11 +445,13 @@ namespace SuperliminalTAS
 		{
 			if (button["Jump"].Count < 1)
 				return;
-			recording = false;
+            if (currentLoadedFile != "")
+                RefreshDemo();
+            recording = false;
 			playingBack = true;
 			TASInput.StartPlayback(this);
             ResetLevelState();
-            frame = 1;
+            frame = 0;
 			GameManager.GM.GetComponent<PlayerSettingsManager>()?.SetMouseSensitivity(2.0f);
 		}
 
@@ -551,6 +597,118 @@ namespace SuperliminalTAS
 			return result;
 		}
 
+        private float Accelerate(float velocity, bool backwards)
+        {
+            velocity += backwards ? -0.06f : 0.06f;
+            return Mathf.Clamp(velocity, -1f, 1f);
+        }
+
+        private float Decelerate(float velocity)
+        {
+            if (Mathf.Approximately(velocity, 0f))
+                return 0f;
+
+            bool negative = velocity < 0f;
+            velocity += negative ? 0.06f : -0.06f;
+
+            if ((velocity < 0f && !negative) || (velocity > 0f && negative))
+                return 0f;
+
+            return velocity;
+        }
+
+        private bool LoadFromCsv(string path)
+        {
+            var lines = File.ReadAllLines(path);
+            if (lines.Length == 0)
+                return false;
+
+            ResetLists();
+
+            float moveH = 0f;
+            float moveV = 0f;
+
+            bool prevJump = false;
+            bool prevGrab = false;
+            bool prevRotate = false;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var cols = lines[i].Split(',');
+
+                bool w = cols[0] == "1";
+                bool a = cols[1] == "1";
+                bool s = cols[2] == "1";
+                bool d = cols[3] == "1";
+
+                float lookX = float.Parse(cols[4]);
+                float lookY = float.Parse(cols[5]);
+
+                bool jump = cols[6] == "1";
+                bool grab = cols[7] == "1";
+                bool rotate = cols[8] == "1";
+
+                // movement reconstruction
+                if (i == 0)
+                {
+                    moveV = 0f;
+                    moveH = 0f;
+
+                    if (w && !s)
+                        moveV = 1f;
+                    else if (s && !w)
+                        moveV = -1f;
+
+                    if (d && !a)
+                        moveH = 1f;
+                    else if (a && !d)
+                        moveH = -1f;
+                }
+                else
+                {
+                    // Subsequent frames: use acceleration/deceleration
+                    if (w && !s)
+                        moveV = Accelerate(moveV, false);
+                    else if (s && !w)
+                        moveV = Accelerate(moveV, true);
+                    else
+                        moveV = Decelerate(moveV);
+
+                    if (d && !a)
+                        moveH = Accelerate(moveH, false);
+                    else if (a && !d)
+                        moveH = Accelerate(moveH, true);
+                    else
+                        moveH = Decelerate(moveH);
+                }
+
+                // axes
+                axis["Move Horizontal"].Add(moveH);
+                axis["Move Vertical"].Add(moveV);
+                axis["Look Horizontal"].Add(lookX);
+                axis["Look Vertical"].Add(lookY);
+
+                // buttons
+                button["Jump"].Add(jump);
+                button["Grab"].Add(grab);
+                button["Rotate"].Add(rotate);
+
+                buttonDown["Jump"].Add(jump && !prevJump);
+                buttonDown["Grab"].Add(grab && !prevGrab);
+                buttonDown["Rotate"].Add(rotate && !prevRotate);
+
+                buttonUp["Jump"].Add(!jump && prevJump);
+                buttonUp["Grab"].Add(!grab && prevGrab);
+                buttonUp["Rotate"].Add(!rotate && prevRotate);
+
+                prevJump = jump;
+                prevGrab = grab;
+                prevRotate = rotate;
+            }
+
+            return true;
+        }
+
         private bool ReadFromFileStream(FileStream stream)
         {
             // magic
@@ -648,6 +806,8 @@ namespace SuperliminalTAS
 
             return true;
         }
+
+        private static int BoolToInt(bool v) => v ? 1 : 0;
 
         private List<float> DeserializeFloatList(byte[] buffer)
 		{
