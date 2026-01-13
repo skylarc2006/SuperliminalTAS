@@ -289,18 +289,6 @@ namespace SuperliminalTAS
 			{
 				ChangeSpeedhackPercentage();
             }
-
-			/*
-			if (Input.GetKeyDown(KeyCode.F5))
-			{
-				SaveState();
-            }
-			if (Input.GetKeyDown(KeyCode.F6))
-			{
-				LoadState();
-            }
-			*/
-
             if (Input.GetKeyDown(KeyCode.F7))
 			{
 				startFromCheckpoint = !startFromCheckpoint;
