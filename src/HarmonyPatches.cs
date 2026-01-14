@@ -43,7 +43,7 @@ namespace SuperliminalTAS
 			__result = TASInput.GetAxis(actionName, __result);
 		}
 	}
-
+    
 	[HarmonyPatch(typeof(UnityEngine.Random), nameof(UnityEngine.Random.onUnitSphere))]
 	[HarmonyPatch(MethodType.Getter)]
 	public class OnUnitSpherePatch
@@ -54,7 +54,7 @@ namespace SuperliminalTAS
 		}
 	}
 
-	[HarmonyPatch(typeof(UnityEngine.Random), nameof(UnityEngine.Random.Range))]
+    [HarmonyPatch(typeof(UnityEngine.Random), nameof(UnityEngine.Random.Range))]
 	[HarmonyPatch(new Type[] { typeof(int), typeof(int) })]
 	public class RandomRangeIntPatch
 	{
@@ -74,7 +74,7 @@ namespace SuperliminalTAS
 		}
 	}
 
-	[HarmonyPatch(typeof(PauseMenu))]
+    [HarmonyPatch(typeof(PauseMenu))]
 	[HarmonyPatch("OnApplicationFocus")]
 	public class ApplicationFocusPatch
 	{

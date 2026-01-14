@@ -78,7 +78,7 @@ def main():
     if not csv_path.exists():
         raise NonexistentPath("Path does not exist!")
         
-    elif not csv_path.is_file:
+    elif not csv_path.is_file():
         raise PathIsNotFile("Path must be a file!")
         
     elif not csv_path.name.endswith(".csv"):
@@ -91,14 +91,17 @@ def main():
     with csv_path.open(mode="r", encoding="utf-8", newline="") as csv_file:
         input_reader = csv.reader(csv_file)
         rows = list(input_reader)
-        frame_count = len(rows)
+        frame_count = len(rows) - 1
 
     input_frames: list[InputFrame] = []
     
-    move_horizontal = 0.0;
-    move_vertical = 0.0;
+    move_horizontal = 0.0
+    move_vertical = 0.0
     
-    for i in range(0, len(rows)):
+    prev_look_horizontal = float(rows[0][4])
+    prev_look_vertical = float(rows[0][5])
+    
+    for i in range(1, len(rows)):
         # Here's where we would determine movement vector
         # ...
         w = bool(int(rows[i][0]))
@@ -107,7 +110,10 @@ def main():
         d = bool(int(rows[i][3]))
         
         # handle movement on the first frame which results in max speed
-        if i == 0:
+        if i == 1:
+            move_horizontal = 0.0
+            move_vertical = 0.0
+            
             if s and not w:
                 move_vertical = -1.0
             if w and not s:
@@ -135,14 +141,17 @@ def main():
                 
         
         
-        look_horizontal = float(rows[i][4])
-        look_vertical = float(rows[i][5])
+        look_horizontal = (float(rows[i][4]) - prev_look_horizontal) / 2.0
+        look_vertical = (prev_look_vertical - float(rows[i][5])) / 2.0
+        prev_look_horizontal = float(rows[i][4])
+        prev_look_vertical = float(rows[i][5])
+        
         jump_active = bool(int(rows[i][6]))
         grab_active = bool(int(rows[i][7]))
         rotate_active = bool(int(rows[i][8]))
         
-        if i > 0:
-            previous_input_frame = input_frames[i - 1]
+        if i > 1:
+            previous_input_frame = input_frames[-1]
             
             jump_pressed = jump_active and not previous_input_frame.jump_active
             grab_pressed = grab_active and not previous_input_frame.grab_active
@@ -160,7 +169,7 @@ def main():
             jump_released = False
             grab_released = False
             rotate_released = False
-            
+        
         input_frames.append(InputFrame(
             move_horizontal,
             move_vertical,

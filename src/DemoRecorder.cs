@@ -36,6 +36,9 @@ namespace SuperliminalTAS
         private bool firstFrameOfRecording = false;
 		private bool startFromCheckpoint = false;
         private string currentLoadedFile = "";
+        private bool levelFadeEnabled = true;
+        private GameObject flashlight;
+        private GameObject player;
 
         private readonly StandaloneFileBrowserWindows fileBrowser = new();
 		private readonly ExtensionFilter[] extensionList = new[] {
@@ -52,7 +55,7 @@ namespace SuperliminalTAS
 				Directory.CreateDirectory(demoDirectory);
 			}
 			ResetLists();
-		}
+        }
 
         private void RefreshDemo()
         {
@@ -127,6 +130,40 @@ namespace SuperliminalTAS
 
         private void LateUpdate()
 		{
+            if (GameManager.GM.player != null)
+            {
+                player = GameManager.GM.player;
+                if (player.transform.Find("Flashlight") == null)
+                {
+                    flashlight = new GameObject("Flashlight");
+                    flashlight.SetActive(false);
+                    this.flashlight.transform.parent = player.transform;
+                    this.flashlight.transform.localPosition = new Vector3(0f, player.GetComponentInChildren<Camera>().transform.localPosition.y, 0f);
+                    Light light = this.flashlight.AddComponent<Light>();
+                    light.range = 10000f;
+                    light.intensity = 0.5f;
+                }
+                else
+                {
+                    flashlight = GameManager.GM.player.transform.Find("Flashlight").gameObject;
+                }
+                // Remove level fade if disabled, original feature made by yyna
+                if (!levelFadeEnabled)
+                {
+                    GameManager.GM.player.transform.Find("GUI Camera").GetComponent<FadeCameraToBlack>().enabled = false;
+                    GameManager.GM.player.transform.Find("GUI Camera/Canvas/Fade").gameObject.SetActive(false);
+
+                    if ((UnityEngine.Object)GameObject.Find("UI_PAUSE_MENU/Canvas/SavingIcon") != (UnityEngine.Object)null)
+                    {
+                        UnityEngine.Object.Destroy((UnityEngine.Object)GameObject.Find("UI_PAUSE_MENU/Canvas/SavingIcon"));
+                    }
+                    if ((UnityEngine.Object)GameObject.Find("Global/UI_PAUSE_MENU/Canvas/SavingIcon") != (UnityEngine.Object)null)
+                    {
+                        UnityEngine.Object.Destroy((UnityEngine.Object)GameObject.Find("Global/UI_PAUSE_MENU/Canvas/SavingIcon"));
+                    }
+                }
+            }
+
             HandleInput();
             if (recording && firstFrameOfRecording)
             {
@@ -185,27 +222,28 @@ namespace SuperliminalTAS
                     if (showPlayerVariables && GameManager.GM.player != null)
                     {
                         var playerPos = GameManager.GM.player.transform.position;
+
+                        statusText.text += $"\n\nPosition: {playerPos.x:0.00000}, {playerPos.y:0.00000}, {playerPos.z:0.00000}\n";
+
+                        var camera = GameManager.GM.player.GetComponentInChildren<Camera>();
+                        var rotationX = camera.transform.rotation.eulerAngles.x;
+                        var rotationY = camera.transform.rotation.eulerAngles.y;
+
+                        statusText.text += $"Rotation: {rotationY:0.00000}, {rotationX:0.00000}";
+
+
                         Vector3f playerVel = new(
                             playerPos.x - prev_x,
                             playerPos.y - prev_y,
                             playerPos.z - prev_z
                         );
+                        float horizontalVelocity = (float)Math.Sqrt(playerVel.X * playerVel.X + playerVel.Z * playerVel.Z);
 
-
-                        statusText.text +=
-                            $"\n\nx: {playerPos.x:0.0000}\n" +
-                            $"y: {playerPos.y:0.0000}\n" +
-                            $"z: {playerPos.z:0.0000}";
+                        statusText.text += $"\n\nVelocity (X, Z): {playerVel.X:0.00000}, {playerVel.Z:0.00000}\n";
 
 						statusText.text +=
-							$"\n\nvel x: {playerVel.X:0.0000}\n" +
-							$"vel z: {playerVel.Z:0.0000}\n";
-
-						float horizontalVelocity = (float)Math.Sqrt(playerVel.X * playerVel.X + playerVel.Z * playerVel.Z);
-
-						statusText.text +=
-							$"Horizontal Velocity: {horizontalVelocity:0.0000}\n" +
-							$"Vertical Velocity: {playerVel.Y:0.0000}";
+							$"Horizontal Velocity: {horizontalVelocity:0.00000}\n" +
+							$"Vertical Velocity: {playerVel.Y:0.00000}";
 
                         prev_x = playerPos.x;
                         prev_y = playerPos.y;
@@ -221,12 +259,9 @@ namespace SuperliminalTAS
 
 							"F4 - Toggle Speedhack\n" +
 							"Mouse Wheel Up/Down - Adjust Percentage\n\n" +
-							
-							/*
-							"F5 - Save State\n" +
-							"F6 - Load State\n\n" +
-							*/
 
+                            "F5 - Toggle Flashlight\n" +
+                            "F6 - Toggle Level Fade (" + (levelFadeEnabled ? "Enabled" : "Disabled") + ")\n" +
 							"F7 - Toggle Start from Restart Level / Last Checkpoint\n" +
 							"Current: " + (startFromCheckpoint ? "Last Checkpoint" : "Restart Level") + "\n\n" +
 
@@ -285,7 +320,18 @@ namespace SuperliminalTAS
 			{
 				ToggleSpeedhack();
             }
-			if (Input.mouseScrollDelta.y != 0)
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                if (flashlight != null)
+                {
+                    flashlight.gameObject.SetActive(!flashlight.gameObject.activeSelf);
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.F6))
+            {
+                levelFadeEnabled = !levelFadeEnabled;
+            }
+            if (Input.mouseScrollDelta.y != 0)
 			{
 				ChangeSpeedhackPercentage();
             }
@@ -620,7 +666,11 @@ namespace SuperliminalTAS
             bool prevGrab = false;
             bool prevRotate = false;
 
-            for (int i = 0; i < lines.Length; i++)
+            var lookCols = lines[0].Split(',');
+            float prevLookX = float.Parse(lookCols[4]);
+            float prevLookY = float.Parse(lookCols[5]);
+
+            for (int i = 1; i < lines.Length; i++)
             {
                 var cols = lines[i].Split(',');
 
@@ -629,15 +679,18 @@ namespace SuperliminalTAS
                 bool s = cols[2] == "1";
                 bool d = cols[3] == "1";
 
-                float lookX = float.Parse(cols[4]);
-                float lookY = float.Parse(cols[5]);
+                float lookX = (float.Parse(cols[4]) - prevLookX) / 2.0f;
+                float lookY = (prevLookY - float.Parse(cols[5])) / 2.0f;
+
+                prevLookX = float.Parse(cols[4]);
+                prevLookY = float.Parse(cols[5]);
 
                 bool jump = cols[6] == "1";
                 bool grab = cols[7] == "1";
                 bool rotate = cols[8] == "1";
 
                 // movement reconstruction
-                if (i == 0)
+                if (i == 1)
                 {
                     moveV = 0f;
                     moveH = 0f;
