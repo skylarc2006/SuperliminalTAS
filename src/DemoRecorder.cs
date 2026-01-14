@@ -229,8 +229,13 @@ namespace SuperliminalTAS
                         var rotationX = camera.transform.rotation.eulerAngles.x;
                         var rotationY = camera.transform.rotation.eulerAngles.y;
 
-                        statusText.text += $"Rotation: {rotationY:0.00000}, {rotationX:0.00000}";
+                        statusText.text += $"Rotation: {rotationY:0.00000}, {rotationX:0.00000}\n";
 
+                        CharacterMotor playerMotor = GameManager.GM.player.GetComponent<CharacterMotor>();
+                        float scale = playerMotor.transform.localScale.x;
+                        statusText.text += $"Scale: {scale:0.00000}x";
+
+                        ResizeScript resizeScript = camera.GetComponent<ResizeScript>();
 
                         Vector3f playerVel = new(
                             playerPos.x - prev_x,
@@ -241,14 +246,43 @@ namespace SuperliminalTAS
 
                         statusText.text += $"\n\nVelocity (X, Z): {playerVel.X:0.00000}, {playerVel.Z:0.00000}\n";
 
-						statusText.text +=
-							$"Horizontal Velocity: {horizontalVelocity:0.00000}\n" +
-							$"Vertical Velocity: {playerVel.Y:0.00000}";
+                        statusText.text +=
+                            $"Horizontal Velocity: {horizontalVelocity:0.00000}\n" +
+                            $"Vertical Velocity: {playerVel.Y:0.00000}";
+
+                        if (resizeScript.isGrabbing && resizeScript.GetGrabbedObject() != null)
+                        {
+                            GameObject grabbedObject = resizeScript.GetGrabbedObject();
+                            string output = string.Concat(new object[]{
+                                grabbedObject.name+"\n",
+                                "Position: "+grabbedObject.transform.position.x.ToString("0.00000")+", "+grabbedObject.transform.position.y.ToString("0.00000")+", "+grabbedObject.transform.position.z.ToString("0.00000")+"\n",
+                                "Scale: "+grabbedObject.transform.localScale.x.ToString("0.00000")+"x"
+                            });
+                            if (grabbedObject.GetComponent<Collider>() != null)
+                            {
+                                Collider playerCollider = player.GetComponent<Collider>();
+                                Collider objectCollider = grabbedObject.GetComponent<Collider>();
+                                if (
+                                    Physics.ComputePenetration(playerCollider, playerCollider.transform.position, playerCollider.transform.rotation,
+                                        objectCollider, objectCollider.transform.position, objectCollider.transform.rotation,
+                                        out Vector3 direction, out float distance))
+                                {
+                                    Vector3 warpPrediction = player.transform.position + direction * distance;
+                                    if (distance > 5)
+                                    {
+                                        output += "\nWarp Prediction: " + warpPrediction.x.ToString("0.00000") + ", " + warpPrediction.y.ToString("0.00000") + ", " + warpPrediction.z.ToString("0.00000");
+                                        output += "\nWarp Distance: " + distance.ToString("0.00000");
+                                    }
+                                }
+                            }
+                            statusText.text += "\n\nGrabbed Object:\n" + output;
+                        }
 
                         prev_x = playerPos.x;
                         prev_y = playerPos.y;
                         prev_z = playerPos.z;
                     }
+                        
 
                     if (showKeybinds)
                     {
