@@ -282,7 +282,7 @@ namespace SuperliminalTAS
                         prev_y = playerPos.y;
                         prev_z = playerPos.z;
                     }
-                        
+
 
                     if (showKeybinds)
                     {
@@ -715,6 +715,15 @@ namespace SuperliminalTAS
 
                 float lookX = (float.Parse(cols[4]) - prevLookX) / 2.0f;
                 float lookY = (prevLookY - float.Parse(cols[5])) / 2.0f;
+
+                if (lookY < 0 && prevLookY < float.Parse(cols[5]))
+                {
+                    lookY *= -1.0f;
+                }
+                else if (lookY > 0 && prevLookY > float.Parse(cols[5]))
+                {
+                    lookY *= -1.0f;
+                }
 
                 prevLookX = float.Parse(cols[4]);
                 prevLookY = float.Parse(cols[5]);

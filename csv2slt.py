@@ -62,7 +62,7 @@ def decelerate(velocity):
         return velocity
     negative = velocity < 0.0
     velocity -= 0.06 if not negative else -0.06
-    
+
     if velocity < 0.0 and not negative:
         velocity = 0.0
     elif velocity > 0.0 and negative:
@@ -72,19 +72,19 @@ def decelerate(velocity):
 def main():
     if len(sys.argv) <= 1:
         raise NoPathPassed("You must pass the path of a .csv file to this script!")
-    
+
     csv_path = Path(sys.argv[1])
-        
+
     if not csv_path.exists():
         raise NonexistentPath("Path does not exist!")
-        
+
     elif not csv_path.is_file():
         raise PathIsNotFile("Path must be a file!")
-        
+
     elif not csv_path.name.endswith(".csv"):
         raise FileIsNotCsvFile("File must be .csv!")
 
-    
+
     filename_prefix = csv_path.stem
     parent_directory = csv_path.parent
 
@@ -94,13 +94,13 @@ def main():
         frame_count = len(rows) - 1
 
     input_frames: list[InputFrame] = []
-    
+
     move_horizontal = 0.0
     move_vertical = 0.0
-    
+
     prev_look_horizontal = float(rows[0][4])
     prev_look_vertical = float(rows[0][5])
-    
+
     for i in range(1, len(rows)):
         # Here's where we would determine movement vector
         # ...
@@ -108,12 +108,12 @@ def main():
         a = bool(int(rows[i][1]))
         s = bool(int(rows[i][2]))
         d = bool(int(rows[i][3]))
-        
+
         # handle movement on the first frame which results in max speed
         if i == 1:
             move_horizontal = 0.0
             move_vertical = 0.0
-            
+
             if s and not w:
                 move_vertical = -1.0
             if w and not s:
@@ -123,7 +123,7 @@ def main():
                 move_horizontal = -1.0
             if d and not a:
                 move_horizontal = 1.0
-        
+
         else:
             if s and not w:
                 move_vertical = accelerate(move_vertical, backwards=True)
@@ -138,38 +138,44 @@ def main():
                 move_horizontal = accelerate(move_horizontal, backwards=False)
             if not a and not d:
                 move_horizontal = decelerate(move_horizontal)
-                
-        
-        
+
+
+
         look_horizontal = (float(rows[i][4]) - prev_look_horizontal) / 2.0
         look_vertical = (prev_look_vertical - float(rows[i][5])) / 2.0
+
+        if look_vertical < 0 and prev_look_vertical < float(rows[i][5]):
+            lookY *= -1.0f;
+        elif (look_vertical > 0 && prev_look_vertical > float(rows[i][5]):
+            lookY *= -1.0f;
+
         prev_look_horizontal = float(rows[i][4])
         prev_look_vertical = float(rows[i][5])
-        
+
         jump_active = bool(int(rows[i][6]))
         grab_active = bool(int(rows[i][7]))
         rotate_active = bool(int(rows[i][8]))
-        
+
         if i > 1:
             previous_input_frame = input_frames[-1]
-            
+
             jump_pressed = jump_active and not previous_input_frame.jump_active
             grab_pressed = grab_active and not previous_input_frame.grab_active
             rotate_pressed = rotate_active and not previous_input_frame.rotate_active
-                
+
             jump_released = not jump_active and previous_input_frame.jump_active
             grab_released = not grab_active and previous_input_frame.grab_active
             rotate_released = not rotate_active and previous_input_frame.rotate_active
-        
+
         else:
             jump_pressed = jump_active
             grab_pressed = grab_active
             rotate_pressed = rotate_active
-            
+
             jump_released = False
             grab_released = False
             rotate_released = False
-        
+
         input_frames.append(InputFrame(
             move_horizontal,
             move_vertical,
@@ -185,7 +191,7 @@ def main():
             grab_released,
             rotate_released
         ))
-        
+
 
     magic_bytes = b"SUPERLIMINALTAS2"
     frame_count_bytes = frame_count.to_bytes(4, byteorder="little", signed=True)
@@ -203,57 +209,57 @@ def main():
         # magic + input length
         replay_file.write(magic_bytes)
         replay_file.write(frame_count_bytes)
-        
+
         # Write input frames
         for input_frame in input_frames:
             # Each frame...
-            
+
             # Move horizontal
             replay_file.write(struct.pack("<f", input_frame.move_horizontal))
-            
+
             # Move vertical
             replay_file.write(struct.pack("<f", input_frame.move_vertical))
-            
+
             # Look horizontal
             replay_file.write(struct.pack("<f", input_frame.look_horizontal))
-            
+
             # Look vertical
             replay_file.write(struct.pack("<f", input_frame.look_vertical))
-            
-            
+
+
             # Jump active
             replay_file.write(struct.pack("?", input_frame.jump_active))
-            
+
             # Grab active
             replay_file.write(struct.pack("?", input_frame.grab_active))
-            
+
             # Rotate active
             replay_file.write(struct.pack("?", input_frame.rotate_active))
-            
-            
+
+
             # Jump pressed
             replay_file.write(struct.pack("?", input_frame.jump_pressed))
-            
+
             # Grab pressed
             replay_file.write(struct.pack("?", input_frame.grab_pressed))
-            
+
             # Rotate pressed
             replay_file.write(struct.pack("?", input_frame.rotate_pressed))
-            
-            
+
+
             # Jump released
             replay_file.write(struct.pack("?", input_frame.jump_released))
-            
+
             # Grab released
             replay_file.write(struct.pack("?", input_frame.grab_released))
-            
+
             # Rotate released
             replay_file.write(struct.pack("?", input_frame.rotate_released))
-            
+
     print("Success!")
-            
-        
-        
-    
+
+
+
+
 if __name__ == "__main__":
     main()
