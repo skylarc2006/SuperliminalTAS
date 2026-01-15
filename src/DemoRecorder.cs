@@ -92,6 +92,13 @@ namespace SuperliminalTAS
 			{
 				RestartMap();
             }
+            if (GameManager.GM.player != null)
+            {
+                GameObject player = GameManager.GM.player;
+    			CharacterMotor playerMotor = player.GetComponent<CharacterMotor>();
+                CharacterMotor.CharacterMotorMovement playerMovement = playerMotor.GetComponent<CharacterMotor.CharacterMotorMovement>();
+    			playerMovement.velocity = new Vector3(0f, 0f, 0f);
+            }
         }
 
         private void ToggleSpeedhack()
