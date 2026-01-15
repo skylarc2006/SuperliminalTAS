@@ -69,6 +69,12 @@ def decelerate(velocity):
         velocity = 0.0
     return velocity
 
+def delta_angle(prev, curr):
+    delta = (curr - prev) % 360.0
+    if delta > 180.0:
+        delta -= 360.0
+    return delta
+
 def main():
     if len(sys.argv) <= 1:
         raise NoPathPassed("You must pass the path of a .csv file to this script!")
@@ -141,13 +147,11 @@ def main():
 
 
 
-        look_horizontal = (float(rows[i][4]) - prev_look_horizontal) / 2.0
-        look_vertical = (prev_look_vertical - float(rows[i][5])) / 2.0
+        curr_look_horizontal = float(rows[i][4])
+        curr_look_vertical = float(rows[i][5])
 
-        if look_vertical < 0 and prev_look_vertical < float(rows[i][5]):
-            lookY *= -1.0f;
-        elif (look_vertical > 0 && prev_look_vertical > float(rows[i][5]):
-            lookY *= -1.0f;
+        look_horizontal = delta_angle(curr_look_horizontal, prev_look_horizontal) / 2.0
+        look_vertical = delta_angle(prev_look_vertical, curr_look_vertical) / 2.0
 
         prev_look_horizontal = float(rows[i][4])
         prev_look_vertical = float(rows[i][5])

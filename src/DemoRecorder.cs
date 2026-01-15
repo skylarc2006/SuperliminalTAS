@@ -713,20 +713,17 @@ namespace SuperliminalTAS
                 bool s = cols[2] == "1";
                 bool d = cols[3] == "1";
 
-                float lookX = (float.Parse(cols[4]) - prevLookX) / 2.0f;
-                float lookY = (prevLookY - float.Parse(cols[5])) / 2.0f;
 
-                if (lookY < 0 && prevLookY < float.Parse(cols[5]))
-                {
-                    lookY *= -1.0f;
-                }
-                else if (lookY > 0 && prevLookY > float.Parse(cols[5]))
-                {
-                    lookY *= -1.0f;
-                }
+                float currLookX = float.Parse(cols[4]);
+                float currLookY = float.Parse(cols[5]);
+                float lookX = (currLookX - prevLookX) / 2.0f;
+                float lookY = (Mathf.DeltaAngle(prevLookY, currLookY) / 2.0f) * -1f;
 
-                prevLookX = float.Parse(cols[4]);
-                prevLookY = float.Parse(cols[5]);
+                // TODO: Handle weird cases with Clone (since camera downwards is locked at 90 rather than 70),
+                // due to funny game stuff it's possible to get (for example) prevLookY = 269.99987f, currLookY = 89.99976f
+                // Stuff like this would result in the TAS moving camera Y in the wrong direction and since the hard limits
+                // are still there, it'd result in the TAS not playing back as it should.
+
 
                 bool jump = cols[6] == "1";
                 bool grab = cols[7] == "1";
@@ -788,6 +785,9 @@ namespace SuperliminalTAS
                 prevJump = jump;
                 prevGrab = grab;
                 prevRotate = rotate;
+
+                prevLookX = float.Parse(cols[4]);
+                prevLookY = float.Parse(cols[5]);
             }
 
             return true;
